@@ -1,68 +1,170 @@
 "use client";
-import Image from "next/image";
-import Swiper from "./components/swiper";
-import Link from "next/link";
-import SwiperB from "./components/swiperbrands";
-import { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import Webcam from "react-webcam";
+import jsQR from "jsqr";
 
-// Define the type for the brand data
-interface BrandItem {
-  
-}
+export default function Page() {
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [isVerified, setIsVerified] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(true);
+  const router = useRouter();
+  const webcamRef = useRef<Webcam>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-export const runtime = "edge";
-
-export default function Home() {
-  const [data, setData] = useState<any>([]);
+  const capture = useCallback(() => {
+    const imageSrc = webcamRef.current?.getScreenshot();
+    if (imageSrc && canvasRef.current) {
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d");
+      const image = new Image();
+      image.src = imageSrc;
+      image.onload = () => {
+        canvas.width = image.width;
+        canvas.height = image.height;
+        context?.drawImage(image, 0, 0, image.width, image.height);
+        const imageData = context?.getImageData(0, 0, image.width, image.height);
+        if (imageData) {
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          if (code) {
+            handleScan(code.data);
+          }
+        }
+      };
+    }
+  }, [webcamRef, canvasRef]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch("https://api.studentdiscountteam.workers.dev/api/automatic", { method: "GET" });
-        const result: BrandItem[] = await response.json(); // Ensure type safety for the API response
-        setData(result.slice(0, 6));
-      } catch (error) {
-        console.error("Error fetching data:", error);
+    const interval = setInterval(() => {
+      if (isScanning) {
+        capture();
       }
-    };
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [capture, isScanning]);
 
-    fetchData();
-  }, []);
+  const handleScan = async (data: string) => {
+    if (data) {
+      setQrCode(data);
+      setIsScanning(false);
+      setError(null);
+      try {
+        const response = await fetch("https://api.studentdiscountteam.workers.dev/api/verify-qr", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ qrCode: data }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+
+        const result:any = await response.json();
+        console.log(result);
+        if (result.verified) {
+          setIsVerified(true);
+        } else {
+          setError("QR code not verified");
+        }
+      } catch (err) {
+        setError("Error verifying QR code");
+        console.error(err);
+      }
+    }
+  };
+
+  const handleVerifyMore = () => {
+    setQrCode(null);
+    setIsVerified(false);
+    setError(null);
+    setIsScanning(true);
+  };
 
   return (
-    <div className="xl:mx-10">
-      <Swiper />   
-        <SwiperB />
-        <div className="brands">
-        <div className="flex justify-between mx-4">
-          <p className="font-bold text-xl">Explore more</p>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+      {isScanning && (
+        <div className="relative border-blue-500">
+          <Webcam
+            audio={false}
+            ref={webcamRef}
+            screenshotFormat="image/jpeg"
+            videoConstraints={{ facingMode: { exact: "environment" } }}
+            className="w-full max-w-md rounded-lg shadow-lg"
+          />
+          <canvas ref={canvasRef} className="hidden" />
         </div>
-      </div>
-
-      <div className="body flex flex-wrap justify-between space-y-10 xl:space-y-1 gap-6 mx-4 mt-10">
-        {data.map((item:any, index:number) => (
-          <div key={index} className="">
-            <div className="rounded-2xl bg-white w-[90vw] xl:w-[40vw] shadow-lg">
-              <img
-                src={item.BrandURL}
-                className="rounded-t-2xl w-[90vw] h-[40vh] object-cover xl:w-[40vw] xl:h-[55vh]"
-                alt={item.text || "Brand image"} 
+      )}
+      {error && <p className="text-red-500 font-semibold mt-4">{error}</p>}
+      {isVerified && (
+        <div className="flex flex-col items-center">
+          <div className="tick-mark">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 52 52"
+              className="tick-mark-svg"
+            >
+              <circle
+                className="tick-mark-circle"
+                cx="26"
+                cy="26"
+                r="25"
+                fill="none"
               />
-              <div className="p-2 text-center">
-              <h3 className="text-lg font-semibold">{item.ProductName}</h3>
-            </div>
-              <div className="flex justify-center w-full h-fit">
-                <Link href={"/checkout"}>
-                  <button className="rounded-full  text-blue-500 m-2 h-[5vh] w-[23vw] xl:w-[11vw] p-1 font-semibold  text-sm">
-                    Get Offer
-                  </button>
-                </Link>
-              </div>
-              
-            </div>
+              <path
+                className="tick-mark-check"
+                fill="none"
+                d="M14.1 27.2l7.1 7.2 16.7-16.8"
+              />
+            </svg>
           </div>
-        ))}
-      </div>
+          <button
+            onClick={handleVerifyMore}
+            className="mt-6 px-4 py-2 bg-blue-500 text-white font-bold rounded-sm hover:bg-green-600"
+          >
+            Verify More
+          </button>
+        </div>
+      )}
+      <style jsx>{`
+        .tick-mark {
+          width: 100px;
+          height: 100px;
+          margin: 0 auto;
+        }
+        .tick-mark-svg {
+          width: 100%;
+          height: 100%;
+        }
+        .tick-mark-circle {
+          stroke: #4caf50;
+          stroke-width: 2;
+          stroke-dasharray: 166;
+          stroke-dashoffset: 166;
+          stroke-linecap: round;
+          animation: dash 0.6s ease-in-out forwards;
+        }
+        .tick-mark-check {
+          stroke: #4caf50;
+          stroke-width: 2;
+          stroke-dasharray: 48;
+          stroke-dashoffset: 48;
+          stroke-linecap: round;
+          animation: dash-check 0.3s 0.6s ease-in-out forwards;
+        }
+        @keyframes dash {
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
+        @keyframes dash-check {
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
+      `}</style>
     </div>
   );
 }
