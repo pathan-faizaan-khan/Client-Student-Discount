@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Webcam from "react-webcam";
 import jsQR from "jsqr";
 import useAuth from "../hooks/useauth";
-import { saveAs } from "file-saver";
+const saveAs = require("file-saver").saveAs;
 import * as XLSX from "xlsx";
 
 export const runtime = "edge";
