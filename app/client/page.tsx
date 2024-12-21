@@ -240,7 +240,7 @@ const Dashboard: React.FC = () => {
           </table>
           <button
             onClick={()=> {
-                clientData.length > 0 ? downloadExcel() : fetchClientData(user.uid);
+                user?.uid ? (clientData.length > 0 ? downloadExcel() : fetchClientData(user.uid)) : setError("User not authenticated");
             }}
             className="mt-4 px-4 py-2 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700"
           >
