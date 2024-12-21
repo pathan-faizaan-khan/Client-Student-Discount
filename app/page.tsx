@@ -82,7 +82,7 @@ export default function Page() {
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-[10vh] xl:w-[15vh] py-2 px-4 font-semibold rounded-lg transition duration-300 ${
+            className={`w-[15vh] xl:w-[20vh] py-2 px-4 font-semibold rounded-lg transition duration-300 ${
               isLoading
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-blue-500 text-white hover:bg-blue-600"

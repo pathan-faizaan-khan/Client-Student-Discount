@@ -21,11 +21,13 @@ const Dashboard: React.FC = () => {
 
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isVerified, setIsVerified] = useState(true);
+  const [scan, setScan] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [clientData, setClientData] = useState<ClientData[]>([]);
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [fetching, setfetching] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -39,7 +41,7 @@ const Dashboard: React.FC = () => {
         setError("User is not authenticated. Cannot verify QR code.");
         return;
       }
-  
+
       if (data) {
         setQrCode(data);
         setIsScanning(false);
@@ -55,22 +57,23 @@ const Dashboard: React.FC = () => {
               body: JSON.stringify({ qrCode: data, clientUid: user.uid }),
             }
           );
-  
+
           if (!verifyResponse.ok) {
             throw new Error("Network response was not ok");
           }
-  
+
           const verifyResult: { verified: boolean; error?: string } =
-            await verifyResponse.json();
+          await verifyResponse.json();
           if (verifyResult.verified) {
             setIsVerified(true);
             fetchClientData(user.uid);
+            setScan(true);
           } else {
-            setError(
-              `QR code not verified`
-            );
+            setScan(false);
+            setError(`QR code not verified`);
           }
         } catch (err) {
+          setScan(false);
           setError("Error verifying QR code");
           console.error(err);
         }
@@ -90,7 +93,12 @@ const Dashboard: React.FC = () => {
         canvas.width = image.width;
         canvas.height = image.height;
         context?.drawImage(image, 0, 0, image.width, image.height);
-        const imageData = context?.getImageData(0, 0, image.width, image.height);
+        const imageData = context?.getImageData(
+          0,
+          0,
+          image.width,
+          image.height
+        );
         if (imageData) {
           const code = jsQR(imageData.data, imageData.width, imageData.height);
           if (code) {
@@ -100,7 +108,7 @@ const Dashboard: React.FC = () => {
       };
     }
   }, [webcamRef, canvasRef, handleScan]);
-  
+
   useEffect(() => {
     const interval = setInterval(() => {
       if (isScanning) {
@@ -109,7 +117,6 @@ const Dashboard: React.FC = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, [capture, isScanning]);
-  
 
   const fetchClientData = async (uid: string) => {
     try {
@@ -130,9 +137,12 @@ const Dashboard: React.FC = () => {
 
       const data: ClientData[] = await response.json();
       setClientData(data);
+      console.log(data);
     } catch (err) {
       setError("Error fetching client data");
       console.error(err);
+    } finally {
+      setfetching(false)
     }
   };
 
@@ -164,7 +174,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center  min-h-screen p-4">
-      {!isScanning  && (
+      {!isScanning && (
         <button
           onClick={() => setIsScanning(true)}
           className="mb-4 mt-20 px-4 py-2 bg-blue-600 text-white font-sans font-semibold rounded-full hover:bg-blue-700"
@@ -172,8 +182,67 @@ const Dashboard: React.FC = () => {
           Open Camera
         </button>
       )}
+      {scan && !isScanning && (
+        <div className="tick-mark">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 52 52"
+            className="tick-mark-svg"
+          >
+            <circle
+              className="tick-mark-circle"
+              cx="26"
+              cy="26"
+              r="25"
+              fill="none"
+            />
+            <path
+              className="tick-mark-check"
+              fill="none"
+              d="M14.1 27.2l7.1 7.2 16.7-16.8"
+            />
+          </svg>
+        </div>
+      )}
+      <style jsx>{`
+        .tick-mark {
+          width: 100px;
+          height: 100px;
+          margin: 0 auto;
+        }
+        .tick-mark-svg {
+          width: 100%;
+          height: 100%;
+        }
+        .tick-mark-circle {
+          stroke: #4caf50;
+          stroke-width: 2;
+          stroke-dasharray: 166;
+          stroke-dashoffset: 166;
+          stroke-linecap: round;
+          animation: dash 0.6s ease-in-out forwards;
+        }
+        .tick-mark-check {
+          stroke: #4caf50;
+          stroke-width: 2;
+          stroke-dasharray: 48;
+          stroke-dashoffset: 48;
+          stroke-linecap: round;
+          animation: dash-check 0.3s 0.6s ease-in-out forwards;
+        }
+        @keyframes dash {
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
+        @keyframes dash-check {
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
+      `}</style>
       {isScanning && (
-        <div className="relative border-blue-500">
+        <div className="relative mt-20 mx-2 shadow-xl bg-white border-blue-500">
           <Webcam
             audio={false}
             ref={webcamRef}
@@ -184,51 +253,62 @@ const Dashboard: React.FC = () => {
           <canvas ref={canvasRef} className="hidden" />
         </div>
       )}
-      {error && <p className="text-red-600 font-semibold mt-4 font-serif">{error}</p>}
+      {error && (
+        <p className="text-red-600 font-semibold mt-4 font-serif">{error}</p>
+      )}
       <button
-            onClick={handleVerifyMore}
-            className={`${isScanning? "visible":"hidden"} px-4 mt-4 py-2 bg-blue-600 text-white font-sans font-semibold rounded-full hover:bg-blue-600`}
-          >
-            {isScanning ? "Close Camera" : ""}
-        </button>
+        onClick={handleVerifyMore}
+        className={`${
+          isScanning ? "visible" : "hidden"
+        } px-4 mt-4 py-2 bg-blue-600 text-white font-sans font-semibold rounded-full hover:bg-blue-600`}
+      >
+        {isScanning ? "Close Camera" : ""}
+      </button>
       {isVerified && !isScanning && (
         <div className="flex flex-col items-center">
           <table className="table-auto border-collapse mt-6">
             <thead className="bg-[#ff820d] text-white">
               <tr>
-                <th className="border border-black   px-4 py-2 ">Name</th>
-                <th className="border border-black  px-4 py-2">College</th>
-                <th className="border border-black  px-4 py-2">Product</th>
-                <th className="border border-black  px-4 py-2">Count</th>
+                <th className="border border-black px-4 py-2">Name</th>
+                <th className="border border-black px-4 py-2">College</th>
+                <th className="border border-black px-4 py-2">Product</th>
+                <th className="border border-black px-4 py-2">Count</th>
               </tr>
             </thead>
             <tbody>
-              {clientData.map((item, index) => {
+              {clientData.slice(0,10).map((item, index) => {
                 const products = JSON.parse(item.productJSON || "[]");
+
                 return (
                   <React.Fragment key={index}>
                     {products.map((product:any, productIndex:number) => (
                       <tr key={`${index}-${productIndex}`}>
+                        {/* Only render Name and College cells for the first product in each group */}
                         {productIndex === 0 && (
                           <>
                             <td
                               rowSpan={products.length}
-                              className="border border-black  px-4 py-2"
+                              className="border border-black px-4 py-2"
                             >
                               {item.name}
                             </td>
                             <td
                               rowSpan={products.length}
-                              className="border border-black  px-4 py-2"
+                              className="border border-black px-4 py-2"
                             >
                               {item.college}
                             </td>
                           </>
                         )}
-                        <td className="border border-black  px-4 py-2">
-                          {product.product}
+                        {/* Combine Brand Name and Product */}
+                        <td className="border border-black px-4 py-2">
+                          {product.brandName
+                            ? `${product.brandName} - ${
+                                product.product || product.productName
+                              }`
+                            : product.product || product.productName}
                         </td>
-                        <td className="border border-black  px-4 py-2">
+                        <td className="border border-black px-4 py-2">
                           {product.count}
                         </td>
                       </tr>
@@ -238,15 +318,21 @@ const Dashboard: React.FC = () => {
               })}
             </tbody>
           </table>
+
           <button
-            onClick={()=> {
-                user?.uid ? (clientData.length > 0 ? downloadExcel() : fetchClientData(user.uid)) : setError("User not authenticated");
+            disabled={fetching}
+            onClick={() => {
+              setfetching(true);
+              user?.uid
+                ? clientData.length > 0
+                  ? downloadExcel()
+                  : fetchClientData(user.uid)
+                : setError("User not authenticated");
             }}
-            className="mt-4 px-4 py-2 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700"
+            className={`${fetching ? "bg-slate-400 cursor-not-allowed": "bg-green-600"} mt-4 px-4 py-2  text-white font-bold rounded-full`}
           >
-            {clientData.length > 0 ? "Download Excel" : "Fetch Data"}
+            {clientData.length > 0 ? "Download Excel" : fetching ? "Fetching..." : "Fetch Data"}
           </button>
-          
         </div>
       )}
     </div>
