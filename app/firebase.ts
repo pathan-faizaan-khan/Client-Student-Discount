@@ -1,35 +1,25 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
 import {
   setPersistence,
   browserLocalPersistence,
   getAuth,
-  sendSignInLinkToEmail,
-  isSignInWithEmailLink,
-  signInWithEmailLink,
 } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD3DytZEugC6y4gHu4CJMUZewG69SX6YQo",
-  authDomain: "studentdiscount-e33ca.firebaseapp.com",
-  databaseURL: "https://studentdiscount-e33ca-default-rtdb.firebaseio.com",
-  projectId: "studentdiscount-e33ca",
-  storageBucket: "studentdiscount-e33ca.firebasestorage.app",
-  messagingSenderId: "234665736317",
-  appId: "1:234665736317:web:85d9a6fb45381a49311914",
-  measurementId: "G-Q8ZKSDZEVL"
+  apiKey: "AIzaSyD3BfH9pIzpgCFlIksQLkX04QwHaVkxhR8",
+  authDomain: "client-student-discount.firebaseapp.com",
+  projectId: "client-student-discount",
+  storageBucket: "client-student-discount.firebasestorage.app",
+  messagingSenderId: "452613033819",
+  appId: "1:452613033819:web:190cf54367bb8c12c3947e",
+  measurementId: "G-DKEPRRZG4N"
 };
+
 const app = initializeApp(firebaseConfig);
 
 const auth = getAuth(app);
 setPersistence(auth, browserLocalPersistence);
-const db = getFirestore(app);
 
 export {
   auth,
-  db,
-  getFirestore,
-  sendSignInLinkToEmail,
-  isSignInWithEmailLink,
-  signInWithEmailLink,
 };
