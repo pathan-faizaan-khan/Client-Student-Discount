@@ -136,7 +136,7 @@ const Dashboard: React.FC = () => {
       }
 
       const data: ClientData[] = await response.json();
-      setClientData(data);
+      setClientData(data.reverse());
       console.log(data);
     } catch (err) {
       setError("Error fetching client data");
