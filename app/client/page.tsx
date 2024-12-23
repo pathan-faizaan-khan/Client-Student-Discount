@@ -76,7 +76,7 @@ const Dashboard: React.FC = () => {
           setScan(false);
           setError("Error verifying QR code");
           console.error(err);
-        }
+       }
       }
     },
     [user]
@@ -173,6 +173,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
+    <div className="absolute top-0 z-[-2] h-screen w-screen bg-white bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]">
     <div className="flex flex-col items-center  min-h-screen p-4">
       {!isScanning && (
         <button
@@ -335,6 +336,7 @@ const Dashboard: React.FC = () => {
           </button>
         </div>
       )}
+    </div>
     </div>
   );
 };

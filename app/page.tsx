@@ -44,6 +44,7 @@ export default function Page() {
   }
 
   return (
+    <div className="absolute top-0 z-[-2] h-screen w-screen bg-white bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]">
     <div className="flex justify-center items-center min-h-screen bg-gray-100">
       <div className="bg-white p-5 shadow-lg rounded-lg w-full max-w-md mx-4">
         <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">Hello! <span className="text-[#ff820d]">Businessman</span></h1>
@@ -92,6 +93,7 @@ export default function Page() {
           </button>
         </form>
       </div>
+    </div>
     </div>
   );
 }
